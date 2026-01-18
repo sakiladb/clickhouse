@@ -1,0 +1,32 @@
+<?xml version="1.0"?>
+<clickhouse>
+    <users>
+        <!-- Default user with access management privileges -->
+        <default>
+            <password></password>
+            <networks>
+                <ip>::/0</ip>
+            </networks>
+            <profile>default</profile>
+            <quota>default</quota>
+            <access_management>1</access_management>
+        </default>
+
+        <!-- Sakila user for the Sakila database -->
+        <sakila>
+            <password_sha256_hex>55217db5d50eba7f218fd16a198e911627af24ae464c2e3f2f5c4b46a23f686d</password_sha256_hex>
+            <networks>
+                <ip>::/0</ip>
+            </networks>
+            <profile>default</profile>
+            <quota>default</quota>
+            <databases>
+                <sakila>
+                    <table>
+                        <filter></filter>
+                    </table>
+                </sakila>
+            </databases>
+        </sakila>
+    </users>
+</clickhouse>
