@@ -3,7 +3,11 @@
     "allow": [
       "Bash(gh run list:*)",
       "Bash(gh run view:*)",
-      "WebSearch"
+      "WebSearch",
+      "Bash(gh api:*)",
+      "Bash(git add:*)",
+      "Bash(git commit:*)",
+      "Bash(git push:*)"
     ]
   }
 }
