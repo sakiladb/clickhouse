@@ -14,6 +14,12 @@ By default these are created:
 docker run -p 8123:8123 -p 9000:9000 -d sakiladb/clickhouse:latest
 ```
 
+## Build Locally
+
+```shell
+docker build -t sakiladb/clickhouse:latest .
+```
+
 ## Ports
 
 - `8123`: HTTP interface
@@ -53,23 +59,23 @@ $ curl 'http://localhost:8123/?user=sakila&password=p_ssW0rd' \
 
 The following tables are available:
 
-| Table | Row Count |
-|-------|-----------|
-| actor | 200 |
-| address | 603 |
-| category | 16 |
-| city | 600 |
-| country | 109 |
-| customer | 599 |
-| film | 1000 |
-| film_actor | 5462 |
-| film_category | 1000 |
-| inventory | 4581 |
-| language | 6 |
-| payment | 16049 |
-| rental | 16044 |
-| staff | 2 |
-| store | 2 |
+| Table         | Row Count |
+|---------------|-----------|
+| actor         | 200       |
+| address       | 603       |
+| category      | 16        |
+| city          | 600       |
+| country       | 109       |
+| customer      | 599       |
+| film          | 1000      |
+| film_actor    | 5462      |
+| film_category | 1000      |
+| inventory     | 4581      |
+| language      | 6         |
+| payment       | 16049     |
+| rental        | 16044     |
+| staff         | 2         |
+| store         | 2         |
 
 ## Views
 
