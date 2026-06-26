@@ -63,4 +63,10 @@ COPY --from=builder /etc/clickhouse-server/users.d/sakila_users.xml /etc/clickho
 # Expose ports: 8123 (HTTP), 9000 (native protocol)
 EXPOSE 8123 9000
 
+# Report readiness once ClickHouse answers a query over the native protocol, so
+# consumers can wait on `healthy` rather than guessing. (The embedded config does
+# not serve the HTTP interface on localhost, so probe via clickhouse-client.)
+HEALTHCHECK --interval=10s --timeout=5s --start-period=20s --retries=6 \
+  CMD clickhouse-client --query "SELECT 1" || exit 1
+
 # The default entrypoint and CMD from the base image will start ClickHouse
