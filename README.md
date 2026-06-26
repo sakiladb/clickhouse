@@ -76,7 +76,7 @@ ClickHouse representation details:
 
 | ClickHouse | sakiladb Release | Architecture     | Docker Hub                            | GitHub Container Registry                     |
 |-----------:|------------------|------------------|---------------------------------------|-----------------------------------------------|
-|         25 | `v25.0.1`        | `amd64`, `arm64` | `sakiladb/clickhouse:25`, `:latest`   | `ghcr.io/sakiladb/clickhouse:25`, `:latest`   |
+|         25 | `v25.0.2`        | `amd64`, `arm64` | `sakiladb/clickhouse:25`, `:latest`   | `ghcr.io/sakiladb/clickhouse:25`, `:latest`   |
 
 Every version is published to both [Docker Hub](https://hub.docker.com/r/sakiladb/clickhouse) and
 [GitHub Container Registry](https://github.com/sakiladb/clickhouse/pkgs/container/clickhouse), is
@@ -91,6 +91,9 @@ the version is derived from the tag. See [CLAUDE.md](./CLAUDE.md) for the full p
 
 ### 2026-06-26
 
+- **Restored faithful original data** (`v25.0.2`) — the Sakila data is now byte-identical to the
+  original MySQL Sakila: the Unicode accents stripped from international place names (e.g. `Réunion`,
+  `Coruña`) are restored.
 - **Reconciled to the consistent sakiladb fixture: 16 tables + 7 views.** Added `film_text` (populated,
   with a `tokenbf_v1` full-text index — `hasToken('astronaut')` = 78) and the `actor_info` (two-stage
   `GROUP BY` rewrite) and `nicer_but_slower_film_list` views; made `film_list`'s cast order deterministic
