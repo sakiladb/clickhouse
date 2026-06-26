@@ -6,6 +6,7 @@ FROM clickhouse/clickhouse-server:latest-alpine AS builder
 # Copy SQL initialization scripts
 COPY ./1-clickhouse-sakila-schema.sql /docker-entrypoint-initdb.d/
 COPY ./2-clickhouse-sakila-data.sql /docker-entrypoint-initdb.d/
+COPY ./3-clickhouse-sakila-finalize.sql /docker-entrypoint-initdb.d/
 
 # Copy users configuration (creates sakila user with p_ssW0rd password)
 COPY ./users.xml /etc/clickhouse-server/users.d/sakila_users.xml
@@ -27,6 +28,9 @@ RUN /entrypoint.sh clickhouse-server & \
     clickhouse-client --multiquery < /docker-entrypoint-initdb.d/2-clickhouse-sakila-data.sql && \
     # Verify data was inserted
     clickhouse-client --query "SELECT count(*) FROM sakila.actor" && \
+    # Populate film_text (must run after the data load)
+    clickhouse-client --multiquery < /docker-entrypoint-initdb.d/3-clickhouse-sakila-finalize.sql && \
+    clickhouse-client --query "SELECT count(*) FROM sakila.film_text" && \
     # Flush all data to disk
     clickhouse-client --query "SYSTEM FLUSH LOGS" && \
     sync && \

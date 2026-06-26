@@ -137,6 +137,23 @@ CREATE TABLE sakila.film_category (
 ORDER BY (film_id, category_id);
 
 --
+-- Table structure for table `film_text`
+-- Populated from film in 3-clickhouse-sakila-finalize.sql. The tokenbf_v1
+-- data-skipping index is a true index (it adds no tables and does not change the
+-- columns sq inspects), so it provides working full-text search invisibly:
+--   SELECT * FROM sakila.film_text
+--   WHERE hasToken(lowerUTF8(concat(title, ' ', description)), 'astronaut');
+--
+
+CREATE TABLE sakila.film_text (
+    film_id UInt16,
+    title String,
+    description String,
+    INDEX idx_ft lowerUTF8(concat(title, ' ', description)) TYPE tokenbf_v1(8192, 3, 0) GRANULARITY 1
+) ENGINE = MergeTree()
+ORDER BY film_id;
+
+--
 -- Table structure for table `store`
 -- References: manager_staff_id -> staff.staff_id
 --             address_id -> address.address_id
@@ -164,7 +181,7 @@ CREATE TABLE sakila.staff (
     address_id UInt16,
     email Nullable(String),
     store_id UInt8,
-    active UInt8 DEFAULT 1,
+    active Bool DEFAULT true,
     username String,
     password Nullable(String),
     last_update DateTime DEFAULT now()
@@ -184,7 +201,7 @@ CREATE TABLE sakila.customer (
     last_name String,
     email Nullable(String),
     address_id UInt16,
-    active UInt8 DEFAULT 1,
+    active Bool DEFAULT true,
     create_date DateTime,
     last_update DateTime DEFAULT now()
 ) ENGINE = MergeTree()
@@ -331,7 +348,7 @@ SELECT
     film.length AS length,
     film.rating AS rating,
     arrayStringConcat(
-        groupArray(concat(actor.first_name, ' ', actor.last_name)),
+        arraySort(groupArray(concat(actor.first_name, ' ', actor.last_name))),
         ', '
     ) AS actors
 FROM sakila.category
@@ -340,3 +357,55 @@ LEFT JOIN sakila.film ON film_category.film_id = film.film_id
 JOIN sakila.film_actor ON film.film_id = film_actor.film_id
 JOIN sakila.actor ON film_actor.actor_id = actor.actor_id
 GROUP BY film.film_id, film.title, film.description, category.name, film.rental_rate, film.length, film.rating;
+
+--
+-- View structure for view `nicer_but_slower_film_list`
+-- Same as film_list, with the cast title-cased (names are ASCII).
+--
+
+CREATE VIEW sakila.nicer_but_slower_film_list AS
+SELECT
+    film.film_id AS FID,
+    film.title AS title,
+    film.description AS description,
+    category.name AS category,
+    film.rental_rate AS price,
+    film.length AS length,
+    film.rating AS rating,
+    arrayStringConcat(arraySort(groupArray(concat(
+        upper(substring(actor.first_name, 1, 1)), lower(substring(actor.first_name, 2)), ' ',
+        upper(substring(actor.last_name, 1, 1)), lower(substring(actor.last_name, 2))))), ', ') AS actors
+FROM sakila.category
+LEFT JOIN sakila.film_category ON category.category_id = film_category.category_id
+LEFT JOIN sakila.film ON film_category.film_id = film.film_id
+JOIN sakila.film_actor ON film.film_id = film_actor.film_id
+JOIN sakila.actor ON film_actor.actor_id = actor.actor_id
+GROUP BY film.film_id, film.title, film.description, category.name, film.rental_rate, film.length, film.rating;
+
+--
+-- View structure for view `actor_info`
+-- ClickHouse has weak correlated-subquery support, so this uses a two-stage
+-- GROUP BY: titles per (actor, category), then categories per actor, with
+-- arraySort at each level for deterministic, cross-engine-identical output.
+--
+
+CREATE VIEW sakila.actor_info AS
+SELECT
+    actor_id,
+    first_name,
+    last_name,
+    arrayStringConcat(arraySort(groupArray(cat_line)), '; ') AS film_info
+FROM (
+    SELECT
+        a.actor_id AS actor_id,
+        any(a.first_name) AS first_name,
+        any(a.last_name) AS last_name,
+        concat(c.name, ': ', arrayStringConcat(arraySort(groupArray(f.title)), ', ')) AS cat_line
+    FROM sakila.actor AS a
+    JOIN sakila.film_actor AS fa ON a.actor_id = fa.actor_id
+    JOIN sakila.film AS f ON fa.film_id = f.film_id
+    JOIN sakila.film_category AS fc ON f.film_id = fc.film_id
+    JOIN sakila.category AS c ON fc.category_id = c.category_id
+    GROUP BY a.actor_id, c.name
+)
+GROUP BY actor_id, first_name, last_name;
