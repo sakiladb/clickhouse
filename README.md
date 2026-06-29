@@ -76,7 +76,7 @@ ClickHouse representation details:
 
 | ClickHouse | sakiladb Release | Architecture     | Docker Hub                            | GitHub Container Registry                     |
 |-----------:|------------------|------------------|---------------------------------------|-----------------------------------------------|
-|         25 | `v25.0.2`        | `amd64`, `arm64` | [`sakiladb/clickhouse:25`](https://hub.docker.com/r/sakiladb/clickhouse), [`:latest`](https://hub.docker.com/r/sakiladb/clickhouse)   | [`ghcr.io/sakiladb/clickhouse:25`](https://github.com/sakiladb/clickhouse/pkgs/container/clickhouse), [`:latest`](https://github.com/sakiladb/clickhouse/pkgs/container/clickhouse)   |
+|         25 | `v25.0.3`        | `amd64`, `arm64` | [`sakiladb/clickhouse:25`](https://hub.docker.com/r/sakiladb/clickhouse), [`:latest`](https://hub.docker.com/r/sakiladb/clickhouse)   | [`ghcr.io/sakiladb/clickhouse:25`](https://github.com/sakiladb/clickhouse/pkgs/container/clickhouse), [`:latest`](https://github.com/sakiladb/clickhouse/pkgs/container/clickhouse)   |
 
 Every version is published to both [Docker Hub](https://hub.docker.com/r/sakiladb/clickhouse) and
 [GitHub Container Registry](https://github.com/sakiladb/clickhouse/pkgs/container/clickhouse), is
@@ -88,6 +88,12 @@ Maintainers: releases are tag-driven. Pushing a semver tag `vN.0.x` builds and p
 the version is derived from the tag. See [CLAUDE.md](./CLAUDE.md) for the full procedure.
 
 ## Changelog
+
+### 2026-06-28
+
+- **Maintenance release** (`v25.0.3`): CI and supply-chain hardening (release-gated registry login,
+  SHA-pinned third-party actions, Dependabot for GitHub Actions). The Sakila dataset and schema are
+  unchanged from the previous release.
 
 ### 2026-06-26
 
