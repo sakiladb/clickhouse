@@ -76,7 +76,7 @@ ClickHouse representation details:
 
 | ClickHouse | sakiladb Release | Architecture     | Docker Hub                            | GitHub Container Registry                     |
 |-----------:|------------------|------------------|---------------------------------------|-----------------------------------------------|
-|         25 | `v25.0.2`        | `amd64`, `arm64` | `sakiladb/clickhouse:25`, `:latest`   | `ghcr.io/sakiladb/clickhouse:25`, `:latest`   |
+|         25 | `v25.0.2`        | `amd64`, `arm64` | [`sakiladb/clickhouse:25`](https://hub.docker.com/r/sakiladb/clickhouse), [`:latest`](https://hub.docker.com/r/sakiladb/clickhouse)   | [`ghcr.io/sakiladb/clickhouse:25`](https://github.com/sakiladb/clickhouse/pkgs/container/clickhouse), [`:latest`](https://github.com/sakiladb/clickhouse/pkgs/container/clickhouse)   |
 
 Every version is published to both [Docker Hub](https://hub.docker.com/r/sakiladb/clickhouse) and
 [GitHub Container Registry](https://github.com/sakiladb/clickhouse/pkgs/container/clickhouse), is
