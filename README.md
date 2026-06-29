@@ -68,7 +68,11 @@ ClickHouse representation details:
   inherent to the engine and invisible to the uniform schema.
 - **Full-text search uses `hasToken(...)`** (accelerated by the `tokenbf_v1` index), the ClickHouse
   analogue of postgres `@@` / MySQL `MATCH … AGAINST`.
-- `film.special_features` is an `Array(String)`; `staff.picture` is omitted.
+- `film.special_features` is an `Array(String)`.
+- **`staff.picture` is omitted.** It is Sakila's only binary (`BLOB`) column, and ClickHouse has no
+  native binary type (only `String`), so it could only be stored as text that `sq` would report as a
+  string rather than bytes. It is dropped rather than misrepresented. (Engines with a clean binary
+  type, Postgres `bytea`, SQL Server `varbinary`, SQLite/MySQL `BLOB`, keep it.)
 
 ## Available versions
 
