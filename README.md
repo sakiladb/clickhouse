@@ -69,10 +69,15 @@ ClickHouse representation details:
 - **Full-text search uses `hasToken(...)`** (accelerated by the `tokenbf_v1` index), the ClickHouse
   analogue of postgres `@@` / MySQL `MATCH … AGAINST`.
 - `film.special_features` is an `Array(String)`.
-- **`staff.picture` is omitted.** It is Sakila's only binary (`BLOB`) column, and ClickHouse has no
-  native binary type (only `String`), so it could only be stored as text that `sq` would report as a
-  string rather than bytes. It is dropped rather than misrepresented. (Engines with a clean binary
-  type, Postgres `bytea`, SQL Server `varbinary`, SQLite/MySQL `BLOB`, keep it.)
+- **`staff.picture` is omitted (a permanent ClickHouse exception).** It is Sakila's only binary
+  (`BLOB`) column, and ClickHouse has **no dedicated binary type**: its `String` type holds arbitrary
+  bytes and deliberately stands in for `BLOB` / `VARCHAR` / `CLOB` / `TEXT`, so a column cannot be
+  marked as binary rather than text. The bytes would store fine, but the column would inspect as text
+  (`sq` reads `String` back as `kind.Text`, never `kind.Bytes`), so it is dropped rather than
+  misrepresented as a string column. This is a by-design trait of ClickHouse, not a temporary gap or a
+  pending upstream fix (the `String`-is-binary model is intentional), so unlike the other engines
+  ClickHouse keeps this column omitted indefinitely. Engines with a real binary type (Postgres
+  `bytea`, SQL Server `varbinary`, SQLite / MySQL `BLOB`) keep the column.
 
 ## Available versions
 
