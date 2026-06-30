@@ -77,7 +77,8 @@ ClickHouse representation details:
   misrepresented as a string column. This is a by-design trait of ClickHouse, not a temporary gap or a
   pending upstream fix (the `String`-is-binary model is intentional), so unlike the other engines
   ClickHouse keeps this column omitted indefinitely. Engines with a real binary type (Postgres
-  `bytea`, SQL Server `varbinary`, SQLite / MySQL `BLOB`) keep the column.
+  `bytea`, SQL Server `varbinary`, Oracle `BLOB`, SQLite / MySQL `BLOB`) keep the column, leaving
+  ClickHouse the only sakiladb variant without it.
 
 ## Available versions
 
