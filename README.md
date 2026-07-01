@@ -91,11 +91,13 @@ ClickHouse representation details:
 
 | ClickHouse | sakiladb Release | Architecture     | Docker Hub                            | GitHub Container Registry                     |
 |-----------:|------------------|------------------|---------------------------------------|-----------------------------------------------|
-|         25 | `v25.0.3`        | `amd64`, `arm64` | [`sakiladb/clickhouse:25`](https://hub.docker.com/r/sakiladb/clickhouse), [`:latest`](https://hub.docker.com/r/sakiladb/clickhouse)   | [`ghcr.io/sakiladb/clickhouse:25`](https://github.com/sakiladb/clickhouse/pkgs/container/clickhouse), [`:latest`](https://github.com/sakiladb/clickhouse/pkgs/container/clickhouse)   |
+|         25 | `v25.0.4`        | `amd64`, `arm64` | [`sakiladb/clickhouse:25`](https://hub.docker.com/r/sakiladb/clickhouse), [`:latest`](https://hub.docker.com/r/sakiladb/clickhouse)   | [`ghcr.io/sakiladb/clickhouse:25`](https://github.com/sakiladb/clickhouse/pkgs/container/clickhouse), [`:latest`](https://github.com/sakiladb/clickhouse/pkgs/container/clickhouse)   |
 
 Every version is published to both [Docker Hub](https://hub.docker.com/r/sakiladb/clickhouse) and
 [GitHub Container Registry](https://github.com/sakiladb/clickhouse/pkgs/container/clickhouse), is
 multi-arch (`linux/amd64`, `linux/arm64`), and is signed with [cosign](https://github.com/sigstore/cosign).
+Each image also carries [SLSA build provenance](https://slsa.dev/) and an SPDX
+[SBOM](https://spdx.dev/) attestation (verify with `gh attestation verify`).
 
 ## Releasing a new version
 
@@ -103,6 +105,15 @@ Maintainers: releases are tag-driven. Pushing a semver tag `vN.0.x` builds and p
 the version is derived from the tag. See [CLAUDE.md](./CLAUDE.md) for the full procedure.
 
 ## Changelog
+
+### 2026-06-30
+
+- **Supply-chain attestations** (`v25.0.4`): published images now carry
+  [SLSA build provenance](https://slsa.dev/) and an SPDX [SBOM](https://spdx.dev/)
+  attestation, alongside the existing cosign signature (pushed to Docker Hub and
+  GHCR as OCI referrers and to GitHub's attestation store; verify with
+  `gh attestation verify`). Each release also self-verifies its attestations. The
+  dataset and schema are unchanged.
 
 ### 2026-06-28
 
