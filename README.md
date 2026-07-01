@@ -25,6 +25,11 @@ docker run -p 8123:8123 -p 9000:9000 -d --name sakila sakiladb/clickhouse:latest
 until [ "$(docker inspect -f '{{.State.Health.Status}}' sakila)" = healthy ]; do sleep 1; done
 ```
 
+> [!TIP]
+> Building or testing on GitHub Actions? Pull from GHCR (`ghcr.io/sakiladb/clickhouse`). Docker Hub
+> rate-limits pulls and CI runners share IP addresses, so the limit is reached quickly; GHCR isn't
+> throttled the same way, especially from within GitHub's network.
+
 ## Connection
 
 | Setting    | Value       |
