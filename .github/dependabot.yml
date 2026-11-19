@@ -1,9 +1,9 @@
 # Keep the GitHub Actions in docker-publish.yml up to date.
 # https://docs.github.com/github/administering-a-repository/configuration-options-for-dependency-updates
 #
-# No "docker" ecosystem entry: the Dockerfile base image is a floating tag
-# (clickhouse/clickhouse-server:latest-alpine), so there's nothing pinned
-# for Dependabot to bump.
+# No "docker" ecosystem entry: the Dockerfile base image is selected per
+# release by the CH_VERSION build arg (derived from the git tag), so there's
+# no single pinned version for Dependabot to bump.
 version: 2
 updates:
   - package-ecosystem: "github-actions"

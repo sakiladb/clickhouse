@@ -87,11 +87,24 @@ ClickHouse representation details:
 
 ## Available versions
 
-`latest` tracks the newest ClickHouse version.
+The image tag is the **ClickHouse release** inside the image, as `YY.M`: `sakiladb/clickhouse:25.8`
+runs ClickHouse `25.8.x`. ClickHouse ships a release roughly every month (`YY.M`), so there is no
+single-number "major" tag; the newest release and the long-term-support (LTS) releases are
+published. `latest` tracks the newest ClickHouse release.
 
-| ClickHouse | sakiladb Release | Architecture     | Docker Hub                            | GitHub Container Registry                     |
-|-----------:|------------------|------------------|---------------------------------------|-----------------------------------------------|
-|         25 | `v25.0.4`        | `amd64`, `arm64` | [`sakiladb/clickhouse:25`](https://hub.docker.com/r/sakiladb/clickhouse), [`:latest`](https://hub.docker.com/r/sakiladb/clickhouse)   | [`ghcr.io/sakiladb/clickhouse:25`](https://github.com/sakiladb/clickhouse/pkgs/container/clickhouse), [`:latest`](https://github.com/sakiladb/clickhouse/pkgs/container/clickhouse)   |
+| ClickHouse | sakiladb Release | Architecture     | Docker Hub | GitHub Container Registry |
+|-----------:|------------------|------------------|------------|---------------------------|
+| 26.10 | `v26.10.0` | `amd64`, `arm64` | [`sakiladb/clickhouse:26.10`](https://hub.docker.com/r/sakiladb/clickhouse), [`:latest`](https://hub.docker.com/r/sakiladb/clickhouse) | [`ghcr.io/sakiladb/clickhouse:26.10`](https://github.com/sakiladb/clickhouse/pkgs/container/clickhouse), [`:latest`](https://github.com/sakiladb/clickhouse/pkgs/container/clickhouse) |
+| 26.8 (LTS) | `v26.8.0` | `amd64`, `arm64` | [`sakiladb/clickhouse:26.8`](https://hub.docker.com/r/sakiladb/clickhouse) | [`ghcr.io/sakiladb/clickhouse:26.8`](https://github.com/sakiladb/clickhouse/pkgs/container/clickhouse) |
+| 26.3 (LTS) | `v26.3.0` | `amd64`, `arm64` | [`sakiladb/clickhouse:26.3`](https://hub.docker.com/r/sakiladb/clickhouse) | [`ghcr.io/sakiladb/clickhouse:26.3`](https://github.com/sakiladb/clickhouse/pkgs/container/clickhouse) |
+| 25.8 (LTS) | `v25.8.0` | `amd64`, `arm64` | [`sakiladb/clickhouse:25.8`](https://hub.docker.com/r/sakiladb/clickhouse) | [`ghcr.io/sakiladb/clickhouse:25.8`](https://github.com/sakiladb/clickhouse/pkgs/container/clickhouse) |
+| 25.3 (LTS) | `v25.3.0` | `amd64`, `arm64` | [`sakiladb/clickhouse:25.3`](https://hub.docker.com/r/sakiladb/clickhouse) | [`ghcr.io/sakiladb/clickhouse:25.3`](https://github.com/sakiladb/clickhouse/pkgs/container/clickhouse) |
+
+> [!NOTE]
+> **`:25` is a legacy tag; don't use it for new work.** It predates this scheme: the `25` was the
+> image's own release number, not a ClickHouse version, and the image it points at actually runs
+> ClickHouse 26.5. It is frozen (no longer rebuilt) and will be removed once known consumers have
+> moved to a `YY.M` tag.
 
 Every version is published to both [Docker Hub](https://hub.docker.com/r/sakiladb/clickhouse) and
 [GitHub Container Registry](https://github.com/sakiladb/clickhouse/pkgs/container/clickhouse), is
@@ -101,10 +114,20 @@ Each image also carries [SLSA build provenance](https://slsa.dev/) and an SPDX
 
 ## Releasing a new version
 
-Maintainers: releases are tag-driven. Pushing a semver tag `vN.0.x` builds and publishes the image —
-the version is derived from the tag. See [CLAUDE.md](./CLAUDE.md) for the full procedure.
+Maintainers: releases are tag-driven. Pushing a semver tag `v{YY}.{M}.{x}` builds and publishes that
+ClickHouse release (`v25.8.0` publishes `:25.8`); the patch number is this image's own revision. See
+[CLAUDE.md](./CLAUDE.md) for the full procedure.
 
 ## Changelog
+
+### 2026-11-19
+
+- **Tags now name the ClickHouse release** ([#5](https://github.com/sakiladb/clickhouse/issues/5)).
+  Images are tagged `YY.M` (`26.10`, `26.8`, `26.3`, `25.8`, `25.3`) and built from the matching
+  `clickhouse/clickhouse-server:YY.M-alpine` base, instead of a single `:25` tag built from
+  whatever ClickHouse was newest that day. The build fails if the server inside does not report
+  the tagged version. `latest` is pinned to the newest release. The old `:25` tag is frozen and
+  deprecated. The dataset and schema are unchanged.
 
 ### 2026-06-30
 

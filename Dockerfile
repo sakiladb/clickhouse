@@ -1,7 +1,16 @@
 # Multi-stage build for ClickHouse with pre-loaded Sakila database
 # Based on the pattern from postgres/Dockerfile
 
-FROM clickhouse/clickhouse-server:latest-alpine AS builder
+# ClickHouse release to build, as YY.M (e.g. 26.10, 25.8). The CI release
+# workflow overrides this per release, deriving it from the git tag (e.g.
+# v25.8.0 -> 25.8). The default is the newest release, for convenient local
+# `docker build`.
+ARG CH_VERSION=26.10
+
+FROM clickhouse/clickhouse-server:${CH_VERSION}-alpine AS builder
+
+# Re-declare to bring the global ARG into this stage (used by the version check).
+ARG CH_VERSION
 
 # Copy SQL initialization scripts
 COPY ./1-clickhouse-sakila-schema.sql /docker-entrypoint-initdb.d/
@@ -20,6 +29,11 @@ RUN /entrypoint.sh clickhouse-server & \
         if clickhouse-client --query "SELECT 1" 2>/dev/null; then break; fi; \
         sleep 1; \
     done && \
+    # Fail the build unless the server really is ClickHouse ${CH_VERSION}.x, so
+    # the published tag can never disagree with the version inside the image.
+    ver="$(clickhouse-client --query "SELECT version()")" && \
+    echo "ClickHouse server version: ${ver} (expected ${CH_VERSION}.x)" && \
+    case "${ver}" in "${CH_VERSION}".*) ;; *) echo "version mismatch" >&2; exit 1 ;; esac && \
     # Run schema creation
     clickhouse-client --multiquery < /docker-entrypoint-initdb.d/1-clickhouse-sakila-schema.sql && \
     # Verify database was created
@@ -52,7 +66,7 @@ RUN /entrypoint.sh clickhouse-server & \
     chown -R clickhouse:clickhouse /var/lib/clickhouse
 
 # Final image
-FROM clickhouse/clickhouse-server:latest-alpine
+FROM clickhouse/clickhouse-server:${CH_VERSION}-alpine
 
 # Copy pre-initialized data directory from builder
 COPY --from=builder /var/lib/clickhouse /var/lib/clickhouse

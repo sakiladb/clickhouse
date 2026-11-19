@@ -4,7 +4,9 @@ on:
   push:
     branches: [ "master", "clickhouse-*" ]
     # Numeric semver only - rejects typo'd tags like 'vfoo.bar.baz' which would
-    # otherwise trigger a release build that emits no tags.
+    # otherwise trigger a release build that emits no tags. The ClickHouse
+    # release to build is derived from the tag, e.g. v25.8.0 builds ClickHouse
+    # 25.8 (see the "Determine ClickHouse version" step).
     tags: [ 'v[0-9]+.[0-9]+.[0-9]+' ]
     # Skip the build for changes that can't affect the built image. paths-ignore
     # is OR'd, so a commit touching only these files is skipped; a commit that
@@ -21,8 +23,13 @@ on:
       - '.gitignore'
       - 'LICENSE'
       - 'docker-run.sh'
-  # Manual build (smoke test only, never publishes).
+  # Manual build of an arbitrary ClickHouse release (smoke test only, never publishes).
   workflow_dispatch:
+    inputs:
+      ch_version:
+        description: "ClickHouse release to build, as YY.M (e.g. 25.8). Smoke test, no publish."
+        required: false
+        default: ""
 
 # Cancel superseded in-progress runs on the same branch/PR; never cancel an
 # in-flight tag (release) run.
@@ -39,6 +46,10 @@ env:
   # here keeps PR/branch builds green, incl. Dependabot/fork PRs that have
   # no access to the registry secrets.
   IS_RELEASE: ${{ startsWith(github.ref, 'refs/tags/v') && github.event_name != 'pull_request' }}
+  # The newest ClickHouse release (YY.M): the single source of truth for which
+  # release gets the `latest` tag, and what branch pushes / PRs build. Bump this
+  # when releasing a new newest ClickHouse.
+  LATEST_VERSION: "26.10"
 
 
 # Third-party actions are SHA-pinned (with version comment) to defend
@@ -61,6 +72,37 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v7
+
+      # Determine which ClickHouse release (YY.M) to build:
+      #   - manual run with an input  -> that input
+      #   - tag push (v25.8.1)        -> the tag's major.minor (25.8)
+      #   - branch push / PR          -> LATEST_VERSION (build the newest)
+      # The result drives both the build-arg and the `latest` tag decision below,
+      # so the git tag is the single source of truth for a release's version.
+      # (The Dockerfile additionally fails the build if the server inside does
+      # not report this version.)
+      - name: Determine ClickHouse version
+        id: chver
+        env:
+          REF_TYPE: ${{ github.ref_type }}
+          REF_NAME: ${{ github.ref_name }}
+          INPUT_VERSION: ${{ github.event.inputs.ch_version }}
+        run: |
+          if [ -n "$INPUT_VERSION" ]; then
+            version="$INPUT_VERSION"
+          elif [ "$REF_TYPE" = "tag" ]; then
+            version="${REF_NAME#v}"   # v25.8.1 -> 25.8.1
+            version="${version%.*}"   # 25.8.1  -> 25.8
+          else
+            version="$LATEST_VERSION"
+          fi
+          # Validate: must be YY.M, digits only (guards against bad input / injection).
+          if ! printf '%s' "$version" | grep -Eqx '[0-9]+\.[0-9]+'; then
+            echo "::error::invalid ClickHouse version: '$version' (expected YY.M, e.g. 25.8)"
+            exit 1
+          fi
+          echo "version=${version}" >> "$GITHUB_OUTPUT"
+          echo "Building ClickHouse version: ${version}"
 
       # Install the cosign tool except on PR
       # https://github.com/sigstore/cosign-installer
@@ -104,10 +146,16 @@ jobs:
           images: |
             ${{ env.REGISTRY_DOCKERHUB }}/${{ env.IMAGE_NAME }}
             ${{ env.REGISTRY_GHCR }}/${{ env.IMAGE_NAME }}
+          # Never auto-assign `latest`; emit it explicitly below only for the
+          # newest release. This keeps `latest` stable regardless of tag-push order.
+          flavor: |
+            latest=false
+          # The Docker tag is the ClickHouse release, YY.M (v25.8.1 -> 25.8).
           tags: |
             type=ref,event=branch
             type=ref,event=pr
-            type=semver,pattern={{major}}
+            type=semver,pattern={{major}}.{{minor}}
+            type=raw,value=latest,enable=${{ github.ref_type == 'tag' && steps.chver.outputs.version == env.LATEST_VERSION }}
       # Build and push Docker image with Buildx (don't push on PR)
       # https://github.com/docker/build-push-action
       - name: Build and push Docker image
@@ -115,6 +163,8 @@ jobs:
         uses: docker/build-push-action@f9f3042f7e2789586610d6e8b85c8f03e5195baf  # v7.2.0
         with:
           context: .
+          build-args: |
+            CH_VERSION=${{ steps.chver.outputs.version }}
           push: ${{ startsWith(github.ref, 'refs/tags/v') && github.event_name != 'pull_request' }}
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
