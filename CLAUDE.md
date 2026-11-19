@@ -93,14 +93,21 @@ unit that matters is the release, `YY.M`, so the git tag is `v{YY}.{M}.{x}` and 
 `{{major}}.{{minor}}`: **`v25.8.0` publishes `:25.8`, which runs ClickHouse 25.8.x**. The patch
 (`x`) is sakiladb's own revision of that release.
 
-- The **"Determine ClickHouse version" step** computes the release: from the `ch_version` input on a
-  manual run; from the tag (`v25.8.1` → `25.8`) on a tag push; otherwise `LATEST_VERSION`. It is
-  validated (`YY.M`, digits only) and passed as `--build-arg CH_VERSION=…`.
-- Only `v*.*.*` tag pushes publish. Branch pushes, PRs, and manual `workflow_dispatch` runs are
-  build-only smoke tests.
-- **`latest`** is never auto-assigned (`flavor: latest=false`); it is emitted only when the tag's
-  release equals the workflow's **`LATEST_VERSION`** env var, so tag-push order is irrelevant and
-  republishing an older release can never steal `latest`.
+- **One release predicate, `IS_RELEASE`:** true only for a *push* of a `v*.*.*` tag. Every
+  publishing step (login, image push, `latest`, signing, attestations, README sync) is gated on it.
+  Branch pushes, PRs, and manual `workflow_dispatch` runs are build-only smoke tests — **including a
+  manual run against a tag ref**, which would otherwise let a `ch_version` input publish a different
+  ClickHouse under the tag's name.
+- The **"Determine ClickHouse version" step** computes the release: on a release, always from the tag
+  (`v25.8.1` → `25.8`); on a build-only run, from the `ch_version` input if given, else the tag (if
+  run against one), else `LATEST_VERSION`. It is validated (`YY.M`, digits only) and passed as
+  `--build-arg CH_VERSION=…`.
+- **`latest`** is never auto-assigned (`flavor: latest=false`); it is emitted only when the release
+  equals **`LATEST_VERSION` as currently set on the default branch**, which the step fetches at run
+  time (and fails closed if it can't). It deliberately does not trust the tagged commit's own copy:
+  re-running an old release whose workflow still names itself as newest must not move `latest`
+  backwards. So tag-push order and re-runs are both irrelevant. Corollary: the `LATEST_VERSION` bump
+  must be **on `master` before** the new tag is pushed, or that release won't get `latest`.
 
 **Which releases to publish:** the newest release, plus the LTS releases (ClickHouse designates the
 `.3` and `.8` releases of each year as LTS), e.g. `26.10`, `26.8`, `26.3`, `25.8`, `25.3`. Upstream

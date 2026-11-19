@@ -42,13 +42,19 @@ env:
   REGISTRY_GHCR: ghcr.io
   # github.repository as <account>/<repo>
   IMAGE_NAME: ${{ github.repository }}
-  # login is only needed when we actually push (on tag pushes); gating it
-  # here keeps PR/branch builds green, incl. Dependabot/fork PRs that have
-  # no access to the registry secrets.
-  IS_RELEASE: ${{ startsWith(github.ref, 'refs/tags/v') && github.event_name != 'pull_request' }}
+  # The single release predicate: true only for a *push* of a release tag.
+  # Everything that publishes (registry login, image push, `latest`, signing,
+  # attestations, README sync) is gated on it. Requiring the push event matters:
+  # workflow_dispatch can be run against a tag ref, and with a `ch_version`
+  # input that would otherwise publish a different ClickHouse under the tag's
+  # name. Manual runs, branch pushes and PRs (incl. Dependabot/fork PRs with no
+  # registry secrets) are always build-only.
+  IS_RELEASE: ${{ github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v') }}
   # The newest ClickHouse release (YY.M): the single source of truth for which
   # release gets the `latest` tag, and what branch pushes / PRs build. Bump this
-  # when releasing a new newest ClickHouse.
+  # when releasing a new newest ClickHouse. For the `latest` decision a release
+  # reads this value from the default branch at run time, not from the tagged
+  # commit (see the "Determine ClickHouse version" step).
   LATEST_VERSION: "26.10"
 
 
@@ -77,18 +83,25 @@ jobs:
       #   - manual run with an input  -> that input
       #   - tag push (v25.8.1)        -> the tag's major.minor (25.8)
       #   - branch push / PR          -> LATEST_VERSION (build the newest)
-      # The result drives both the build-arg and the `latest` tag decision below,
-      # so the git tag is the single source of truth for a release's version.
-      # (The Dockerfile additionally fails the build if the server inside does
-      # not report this version.)
+      # A release (IS_RELEASE) always takes the version from its tag; the manual
+      # input only applies to build-only runs. (The Dockerfile additionally fails
+      # the build if the server inside does not report this version.)
+      #
+      # `latest` goes to a release only if its version equals LATEST_VERSION *as
+      # currently set on the default branch*. Reading it from the tagged commit
+      # would let a re-run of an older release (whose workflow still names itself
+      # as newest) move `latest` backwards. Fails closed if it can't be read.
       - name: Determine ClickHouse version
         id: chver
         env:
           REF_TYPE: ${{ github.ref_type }}
           REF_NAME: ${{ github.ref_name }}
           INPUT_VERSION: ${{ github.event.inputs.ch_version }}
+          DEFAULT_BRANCH: ${{ github.event.repository.default_branch }}
+          GH_TOKEN: ${{ github.token }}
         run: |
-          if [ -n "$INPUT_VERSION" ]; then
+          set -euo pipefail
+          if [ "$IS_RELEASE" != "true" ] && [ -n "$INPUT_VERSION" ]; then
             version="$INPUT_VERSION"
           elif [ "$REF_TYPE" = "tag" ]; then
             version="${REF_NAME#v}"   # v25.8.1 -> 25.8.1
@@ -101,13 +114,26 @@ jobs:
             echo "::error::invalid ClickHouse version: '$version' (expected YY.M, e.g. 25.8)"
             exit 1
           fi
+          is_latest=false
+          if [ "$IS_RELEASE" = "true" ]; then
+            current_latest="$(gh api "repos/${GITHUB_REPOSITORY}/contents/.github/workflows/docker-publish.yml?ref=${DEFAULT_BRANCH}" \
+              -H "Accept: application/vnd.github.raw" \
+              | sed -n 's/^  LATEST_VERSION: *"\([0-9][0-9]*\.[0-9][0-9]*\)".*$/\1/p')"
+            if [ -z "$current_latest" ]; then
+              echo "::error::could not read LATEST_VERSION from ${DEFAULT_BRANCH}"
+              exit 1
+            fi
+            echo "Newest ClickHouse per ${DEFAULT_BRANCH}: ${current_latest}"
+            if [ "$version" = "$current_latest" ]; then is_latest=true; fi
+          fi
           echo "version=${version}" >> "$GITHUB_OUTPUT"
-          echo "Building ClickHouse version: ${version}"
+          echo "is_latest=${is_latest}" >> "$GITHUB_OUTPUT"
+          echo "Building ClickHouse version: ${version} (release: ${IS_RELEASE}, latest: ${is_latest})"
 
       # Install the cosign tool except on PR
       # https://github.com/sigstore/cosign-installer
       - name: Install cosign
-        if: ${{ startsWith(github.ref, 'refs/tags/v') && github.event_name != 'pull_request' }}
+        if: ${{ env.IS_RELEASE == 'true' }}
         uses: sigstore/cosign-installer@6f9f17788090df1f26f669e9d70d6ae9567deba6  # v4.1.2
 
       - name: Set up QEMU
@@ -155,7 +181,7 @@ jobs:
             type=ref,event=branch
             type=ref,event=pr
             type=semver,pattern={{major}}.{{minor}}
-            type=raw,value=latest,enable=${{ github.ref_type == 'tag' && steps.chver.outputs.version == env.LATEST_VERSION }}
+            type=raw,value=latest,enable=${{ steps.chver.outputs.is_latest == 'true' }}
       # Build and push Docker image with Buildx (don't push on PR)
       # https://github.com/docker/build-push-action
       - name: Build and push Docker image
@@ -165,7 +191,7 @@ jobs:
           context: .
           build-args: |
             CH_VERSION=${{ steps.chver.outputs.version }}
-          push: ${{ startsWith(github.ref, 'refs/tags/v') && github.event_name != 'pull_request' }}
+          push: ${{ env.IS_RELEASE == 'true' }}
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
           platforms: linux/amd64,linux/arm64
@@ -179,7 +205,7 @@ jobs:
       # transparency data even for private images, pass --force to cosign below.
       # https://github.com/sigstore/cosign
       - name: Sign the published Docker image
-        if: ${{ startsWith(github.ref, 'refs/tags/v') && github.event_name != 'pull_request' }}
+        if: ${{ env.IS_RELEASE == 'true' }}
         env:
           COSIGN_EXPERIMENTAL: "true"
           TAGS: ${{ steps.meta.outputs.tags }}
